@@ -19,16 +19,21 @@ Object.defineProperty(exports, "__esModule", { value: true });
 //const { resolve } = require('path');
 const path_1 = require("path");
 const fs_1 = require("fs");
-let sourceDir = "";
 //let sourceDir: string = "/mnt/c/Users/justi/workspaceJava/RapidclipseX/DIx/fdox/fdox/src/main/java/de/dominoinformatics/dominoinformatics/fdox"
+let sourceDir = process.env.SOURCE_PATH;
 let outputDir = "./output/index.html";
+let stylePath = process.env.TAILWIND_PURGE_OUTPUT;
 let classes = {};
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
         if (!fs_1.existsSync("./output")) {
             fs_1.mkdirSync("./output", { recursive: true });
         }
+        //create dirs because it will be deleted before this runs
+        fs_1.mkdirSync(path_1.dirname(stylePath), { recursive: true });
+        //read dirs and extract all classes
         yield readAllDirs(sourceDir);
+        //write it to an html document
         yield writeHtml();
     });
 }

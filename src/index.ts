@@ -1,25 +1,32 @@
 //const { resolve } = require('path');
-import { resolve, extname } from "path"
-import { promises, mkdirSync, existsSync } from "fs"
+import { resolve, extname, dirname } from "path";
+import { promises, mkdirSync, existsSync } from "fs";
 
-let sourceDir: string = ""
 //let sourceDir: string = "/mnt/c/Users/justi/workspaceJava/RapidclipseX/DIx/fdox/fdox/src/main/java/de/dominoinformatics/dominoinformatics/fdox"
-let outputDir: string = "./output/index.html"
+let sourceDir: any = process.env.SOURCE_PATH;
+let outputDir: string = "./output/index.html";
+let stylePath: any = process.env.TAILWIND_PURGE_OUTPUT;
 
-let classes: any = {}
+let classes: any = {};
 
 async function main() {
-   if (!existsSync("./output")) {
-      mkdirSync("./output", { recursive: true })
-   }
+  if (!existsSync("./output")) {
+    mkdirSync("./output", { recursive: true });
+  }
 
-   await readAllDirs(sourceDir)
-   await writeHtml()
+  //create dirs because it will be deleted before this runs
+  mkdirSync(dirname(stylePath), { recursive: true });
+
+  //read dirs and extract all classes
+  await readAllDirs(sourceDir);
+
+  //write it to an html document
+  await writeHtml();
 }
 
 function writeHtml() {
-   const classString = Object.keys(classes).join(" ")
-   const htmlString = `
+  const classString = Object.keys(classes).join(" ");
+  const htmlString = `
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -32,13 +39,13 @@ function writeHtml() {
     <div id="purge" class="${classString}"></div>
   </body>
 </html>
-   `
+   `;
 
-   promises.writeFile(outputDir, htmlString)
+  promises.writeFile(outputDir, htmlString);
 }
 
 function checkValue(value: string) {
-   return classes[value] === true
+  return classes[value] === true;
 }
 
 /* async function* getFiles(dir: string): any {
@@ -62,52 +69,57 @@ function checkValue(value: string) {
 } */
 
 async function readAllDirs(dir: string) {
-   const dirents = await promises.readdir(dir, { withFileTypes: true })
+  const dirents = await promises.readdir(dir, { withFileTypes: true });
 
-   for await (const dirent of dirents) {
-      const res = resolve(dir, dirent.name)
-      if (dirent.isDirectory()) {
-         await readAllDirs(res)
-      } else {
-         if (extname(res).includes("java")) {
-            await readJavaFile(res)
-         }
+  for await (const dirent of dirents) {
+    const res = resolve(dir, dirent.name);
+    if (dirent.isDirectory()) {
+      await readAllDirs(res);
+    } else {
+      if (extname(res).includes("java")) {
+        await readJavaFile(res);
       }
-   }
+    }
+  }
 }
 
 async function readJavaFile(path: string) {
-   const res = await promises.readFile(path)
+  const res = await promises.readFile(path);
 
-   extractWords("setClassName", '("', '")', res)
-   extractWords("addClassName", '("', '")', res)
-   extractWords('addClassNames"', '("', '")', res)
+  extractWords("setClassName", '("', '")', res);
+  extractWords("addClassName", '("', '")', res);
+  extractWords('addClassNames"', '("', '")', res);
 }
 
-async function extractWords(keyword: string, start: string, end: string, data: Buffer) {
-   let index = 0
-   while (index != -1) {
-      const currPointer = data.indexOf(keyword, index)
-      if (currPointer != -1) {
-         //extracting classNames
-         const startIndex = data.indexOf(start, currPointer) + start.length
-         const endIndex = data.indexOf(end, currPointer)
+async function extractWords(
+  keyword: string,
+  start: string,
+  end: string,
+  data: Buffer
+) {
+  let index = 0;
+  while (index != -1) {
+    const currPointer = data.indexOf(keyword, index);
+    if (currPointer != -1) {
+      //extracting classNames
+      const startIndex = data.indexOf(start, currPointer) + start.length;
+      const endIndex = data.indexOf(end, currPointer);
 
-         const styles = data.slice(startIndex, endIndex).toString()
+      const styles = data.slice(startIndex, endIndex).toString();
 
-         const splitted: string[] = styles.split(" ")
+      const splitted: string[] = styles.split(" ");
 
-         for (const item of splitted) {
-            if (checkValue(item) === false) {
-               classes[item] = true
-            }
-         }
-
-         index = currPointer + 1
-      } else {
-         index = -1
+      for (const item of splitted) {
+        if (checkValue(item) === false) {
+          classes[item] = true;
+        }
       }
-   }
+
+      index = currPointer + 1;
+    } else {
+      index = -1;
+    }
+  }
 }
 
-main()
+main();
